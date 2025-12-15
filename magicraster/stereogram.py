@@ -3,6 +3,10 @@
 import numpy as np
 from typing import Optional, Tuple
 
+# Constants
+GRAYSCALE_RANGE = 256
+GRAYSCALE_MID = 128
+
 
 def generate_depth_map(
     width: int,
@@ -26,14 +30,14 @@ def generate_depth_map(
         x = np.linspace(0, 4 * np.pi, width)
         y = np.linspace(0, 4 * np.pi, height)
         X, Y = np.meshgrid(x, y)
-        depth = (np.sin(X) + np.sin(Y)) * amplitude / 2 + 128
+        depth = (np.sin(X) + np.sin(Y)) * amplitude / 2 + GRAYSCALE_MID
         
     elif pattern == "circles":
         # Create concentric circles
         center_x, center_y = width // 2, height // 2
         y, x = np.ogrid[:height, :width]
         distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-        depth = (np.sin(distance / 10) * amplitude + 128)
+        depth = (np.sin(distance / 10) * amplitude + GRAYSCALE_MID)
         
     elif pattern == "pyramid":
         # Create a pyramid shape
@@ -42,24 +46,31 @@ def generate_depth_map(
         depth = amplitude * (1 - np.maximum(
             np.abs(x - center_x) / center_x,
             np.abs(y - center_y) / center_y
-        )) + 128 - amplitude / 2
+        )) + GRAYSCALE_MID - amplitude / 2
         
     elif pattern == "random":
-        # Create smooth random terrain using Perlin-like noise
-        # Simple implementation using Gaussian filtering
-        from scipy import ndimage
-        try:
-            noise = np.random.rand(height // 10, width // 10) * amplitude
-            depth = ndimage.zoom(noise, 10, order=3) + 128
-            depth = depth[:height, :width]
-        except ImportError:
-            # Fallback if scipy is not available
-            depth = np.random.rand(height, width) * amplitude + 128 - amplitude / 2
+        # Create smooth random terrain
+        # Simple implementation without scipy dependency
+        # Use multiple passes of averaging for smoothing effect
+        depth = np.random.rand(height, width) * amplitude + GRAYSCALE_MID - amplitude / 2
+        
+        # Apply simple smoothing by averaging with neighbors
+        kernel_size = 5
+        smoothed = depth.copy()
+        for _ in range(3):  # Multiple passes for smoother result
+            for y in range(kernel_size // 2, height - kernel_size // 2):
+                for x in range(kernel_size // 2, width - kernel_size // 2):
+                    neighborhood = depth[
+                        y - kernel_size // 2:y + kernel_size // 2 + 1,
+                        x - kernel_size // 2:x + kernel_size // 2 + 1
+                    ]
+                    smoothed[y, x] = np.mean(neighborhood)
+            depth = smoothed.copy()
     else:
         raise ValueError(f"Unknown pattern: {pattern}")
     
     # Clip values to valid range
-    return np.clip(depth, 0, 255).astype(np.uint8)
+    return np.clip(depth, 0, GRAYSCALE_RANGE - 1).astype(np.uint8)
 
 
 def generate_random_pattern(width: int, height: int, pattern_width: int) -> np.ndarray:
@@ -74,7 +85,7 @@ def generate_random_pattern(width: int, height: int, pattern_width: int) -> np.n
         A 2D numpy array with random grayscale pattern
     """
     # Generate random pattern strip
-    pattern = np.random.randint(0, 256, (height, pattern_width), dtype=np.uint8)
+    pattern = np.random.randint(0, GRAYSCALE_RANGE, (height, pattern_width), dtype=np.uint8)
     return pattern
 
 
@@ -121,7 +132,7 @@ def generate_stereogram(
             # Calculate the shift based on depth
             # Depth affects how far we look back in the image
             depth_value = int(depth_map[y, x])
-            shift = int((depth_value - 128) * depth_scale * eye_separation * width / 256)
+            shift = int((depth_value - GRAYSCALE_MID) * depth_scale * eye_separation * width / GRAYSCALE_RANGE)
             
             # Reference pixel position
             ref_x = x - strip_width - shift
@@ -130,7 +141,7 @@ def generate_stereogram(
                 stereogram[y, x] = stereogram[y, ref_x]
             else:
                 # If reference is out of bounds, use random value
-                stereogram[y, x] = np.random.randint(0, 256, dtype=np.uint8)
+                stereogram[y, x] = np.random.randint(0, GRAYSCALE_RANGE, dtype=np.uint8)
     
     return stereogram
 

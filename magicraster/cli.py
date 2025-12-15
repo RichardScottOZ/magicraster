@@ -112,11 +112,18 @@ Examples:
         help="Depth scale factor (default: 0.3)",
     )
     
+    parser.add_argument(
+        "--force",
+        "-f",
+        action="store_true",
+        help="Overwrite output file if it exists without prompting",
+    )
+    
     args = parser.parse_args()
     
     # Validate output path
     output_path = Path(args.output)
-    if output_path.exists():
+    if output_path.exists() and not args.force:
         response = input(f"File {output_path} exists. Overwrite? [y/N]: ")
         if response.lower() != 'y':
             print("Aborted.")
