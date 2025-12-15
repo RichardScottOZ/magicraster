@@ -205,3 +205,9 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Test and example outputs
+test_output/
+examples/output/
+*.tif
+*.tiff

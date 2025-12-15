@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "magicraster"
+version = "0.1.0"
+description = "Generate magic eye (stereogram) raster GeoTIFF images"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.20.0",
+    "pillow>=9.0.0",
+    "rasterio>=1.3.0",
+]
+
+[project.scripts]
+magicraster = "magicraster.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
