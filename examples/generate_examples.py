@@ -62,8 +62,22 @@ def main():
     )
     print("   ✓ Saved pyramid.tif")
     
-    # Example 4: High resolution sine
-    print("\n4. Generating high-resolution sine wave...")
+    # Example 4: Dinosaur with DMC logo
+    print("\n4. Generating dinosaur with DMC logo...")
+    stereogram = generate_stereogram(
+        width=1000,
+        height=700,
+        pattern_type="dinosaur",
+        depth_amplitude=70.0,
+    )
+    save_as_geotiff(
+        stereogram,
+        str(output_dir / "dinosaur_dmc.tif"),
+    )
+    print("   ✓ Saved dinosaur_dmc.tif")
+    
+    # Example 5: High resolution sine
+    print("\n5. Generating high-resolution sine wave...")
     stereogram = generate_stereogram(
         width=1600,
         height=1200,

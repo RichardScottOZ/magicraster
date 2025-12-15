@@ -65,7 +65,7 @@ Examples:
     parser.add_argument(
         "--pattern",
         type=str,
-        choices=["sine", "circles", "pyramid", "random"],
+        choices=["sine", "circles", "pyramid", "random", "dinosaur"],
         default="sine",
         help="Depth pattern type (default: sine)",
     )

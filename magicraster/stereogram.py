@@ -19,7 +19,7 @@ def generate_depth_map(
     Args:
         width: Width of the depth map in pixels
         height: Height of the depth map in pixels
-        pattern: Type of pattern ('sine', 'circles', 'pyramid', 'random')
+        pattern: Type of pattern ('sine', 'circles', 'pyramid', 'random', 'dinosaur')
         amplitude: Amplitude of the depth variation (0-255)
     
     Returns:
@@ -66,6 +66,68 @@ def generate_depth_map(
                     ]
                     smoothed[y, x] = np.mean(neighborhood)
             depth = smoothed.copy()
+    elif pattern == "dinosaur":
+        from PIL import Image, ImageDraw, ImageFont
+
+        base = np.full((height, width), GRAYSCALE_MID, dtype=np.uint8)
+        img = Image.fromarray(base)
+        draw = ImageDraw.Draw(img)
+
+        foreground = int(np.clip(GRAYSCALE_MID + amplitude * 0.6, 0, GRAYSCALE_RANGE - 1))
+        logo_depth = int(np.clip(GRAYSCALE_MID - amplitude * 0.4, 0, GRAYSCALE_RANGE - 1))
+
+        body_box = (
+            int(width * 0.1),
+            int(height * 0.5),
+            int(width * 0.7),
+            int(height * 0.8),
+        )
+        draw.ellipse(body_box, fill=foreground)
+
+        tail_points = [
+            (int(width * 0.1), int(height * 0.65)),
+            (int(width * 0.02), int(height * 0.55)),
+            (int(width * 0.15), int(height * 0.6)),
+        ]
+        draw.polygon(tail_points, fill=foreground)
+
+        draw.rectangle(
+            [
+                (int(width * 0.65), int(height * 0.3)),
+                (int(width * 0.75), int(height * 0.55)),
+            ],
+            fill=foreground,
+        )
+        draw.ellipse(
+            [
+                (int(width * 0.73), int(height * 0.25)),
+                (int(width * 0.83), int(height * 0.35)),
+            ],
+            fill=foreground,
+        )
+
+        leg_width = int(width * 0.06)
+        leg_height = int(height * 0.18)
+        leg_y = int(height * 0.78)
+        for offset in (0.25, 0.5):
+            x_start = int(width * offset)
+            draw.rectangle(
+                [
+                    (x_start, leg_y),
+                    (x_start + leg_width, leg_y + leg_height),
+                ],
+                fill=foreground,
+            )
+
+        font = ImageFont.load_default()
+        text = "DMC"
+        draw.text(
+            (int(width * 0.55), int(height * 0.15)),
+            text,
+            font=font,
+            fill=logo_depth,
+        )
+        depth = np.array(img, dtype=np.uint8)
     else:
         raise ValueError(f"Unknown pattern: {pattern}")
     
@@ -106,7 +168,7 @@ def generate_stereogram(
     Args:
         width: Width of the output image in pixels
         height: Height of the output image in pixels
-        pattern_type: Type of depth pattern ('sine', 'circles', 'pyramid', 'random')
+        pattern_type: Type of depth pattern ('sine', 'circles', 'pyramid', 'random', 'dinosaur')
         depth_amplitude: Amplitude of depth variation (higher = more depth)
         strip_width: Width of the initial random pattern strip
         eye_separation: Eye separation as fraction of width (affects viewing distance)
