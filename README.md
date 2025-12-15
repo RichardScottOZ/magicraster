@@ -84,6 +84,7 @@ save_as_geotiff(
 - **circles**: Concentric circles creating a bulls-eye 3D effect
 - **pyramid**: A pyramid or cone shape emerging from the background
 - **random**: Smooth random terrain-like surface
+- **dinosaur**: A dinosaur silhouette with an embedded "DMC" logo for the Dinosaur Magic Company
 
 ## Command Line Options
 
@@ -94,7 +95,7 @@ positional arguments:
 optional arguments:
   --width WIDTH         Width of the image in pixels (default: 800)
   --height HEIGHT       Height of the image in pixels (default: 600)
-  --pattern {sine,circles,pyramid,random}
+  --pattern {sine,circles,pyramid,random,dinosaur}
                         Depth pattern type (default: sine)
   --depth DEPTH         Depth amplitude (0-100, default: 50.0)
   --strip-width STRIP_WIDTH

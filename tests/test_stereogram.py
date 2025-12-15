@@ -21,7 +21,7 @@ def test_generate_stereogram_basic():
 
 def test_generate_stereogram_patterns():
     """Test different pattern types."""
-    patterns = ["sine", "circles", "pyramid"]
+    patterns = ["sine", "circles", "pyramid", "dinosaur"]
     
     for pattern in patterns:
         stereogram = generate_stereogram(
