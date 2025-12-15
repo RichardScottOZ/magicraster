@@ -1,6 +1,7 @@
 """Core stereogram generation algorithms."""
 
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 from typing import Optional, Tuple
 
 # Constants
@@ -67,8 +68,6 @@ def generate_depth_map(
                     smoothed[y, x] = np.mean(neighborhood)
             depth = smoothed.copy()
     elif pattern == "dinosaur":
-        from PIL import Image, ImageDraw, ImageFont
-
         base = np.full((height, width), GRAYSCALE_MID, dtype=np.uint8)
         img = Image.fromarray(base)
         draw = ImageDraw.Draw(img)

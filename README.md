@@ -96,7 +96,7 @@ optional arguments:
   --width WIDTH         Width of the image in pixels (default: 800)
   --height HEIGHT       Height of the image in pixels (default: 600)
   --pattern {sine,circles,pyramid,random,dinosaur}
-                         Depth pattern type (default: sine)
+                        Depth pattern type (default: sine)
   --depth DEPTH         Depth amplitude (0-100, default: 50.0)
   --strip-width STRIP_WIDTH
                         Width of the random pattern strip (default: 100)
