@@ -1,0 +1,181 @@
+"""Core stereogram generation algorithms."""
+
+import numpy as np
+from typing import Optional, Tuple
+
+
+def generate_depth_map(
+    width: int,
+    height: int,
+    pattern: str = "sine",
+    amplitude: float = 50.0,
+) -> np.ndarray:
+    """Generate a depth map for the stereogram.
+    
+    Args:
+        width: Width of the depth map in pixels
+        height: Height of the depth map in pixels
+        pattern: Type of pattern ('sine', 'circles', 'pyramid', 'random')
+        amplitude: Amplitude of the depth variation (0-255)
+    
+    Returns:
+        A 2D numpy array with depth values (0-255)
+    """
+    if pattern == "sine":
+        # Create a sinusoidal wave pattern
+        x = np.linspace(0, 4 * np.pi, width)
+        y = np.linspace(0, 4 * np.pi, height)
+        X, Y = np.meshgrid(x, y)
+        depth = (np.sin(X) + np.sin(Y)) * amplitude / 2 + 128
+        
+    elif pattern == "circles":
+        # Create concentric circles
+        center_x, center_y = width // 2, height // 2
+        y, x = np.ogrid[:height, :width]
+        distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
+        depth = (np.sin(distance / 10) * amplitude + 128)
+        
+    elif pattern == "pyramid":
+        # Create a pyramid shape
+        y, x = np.ogrid[:height, :width]
+        center_x, center_y = width // 2, height // 2
+        depth = amplitude * (1 - np.maximum(
+            np.abs(x - center_x) / center_x,
+            np.abs(y - center_y) / center_y
+        )) + 128 - amplitude / 2
+        
+    elif pattern == "random":
+        # Create smooth random terrain using Perlin-like noise
+        # Simple implementation using Gaussian filtering
+        from scipy import ndimage
+        try:
+            noise = np.random.rand(height // 10, width // 10) * amplitude
+            depth = ndimage.zoom(noise, 10, order=3) + 128
+            depth = depth[:height, :width]
+        except ImportError:
+            # Fallback if scipy is not available
+            depth = np.random.rand(height, width) * amplitude + 128 - amplitude / 2
+    else:
+        raise ValueError(f"Unknown pattern: {pattern}")
+    
+    # Clip values to valid range
+    return np.clip(depth, 0, 255).astype(np.uint8)
+
+
+def generate_random_pattern(width: int, height: int, pattern_width: int) -> np.ndarray:
+    """Generate a random pattern strip for the stereogram.
+    
+    Args:
+        width: Total width of the image
+        height: Height of the image
+        pattern_width: Width of the repeating pattern strip
+    
+    Returns:
+        A 2D numpy array with random grayscale pattern
+    """
+    # Generate random pattern strip
+    pattern = np.random.randint(0, 256, (height, pattern_width), dtype=np.uint8)
+    return pattern
+
+
+def generate_stereogram(
+    width: int = 800,
+    height: int = 600,
+    pattern_type: str = "sine",
+    depth_amplitude: float = 50.0,
+    strip_width: int = 100,
+    eye_separation: float = 0.12,
+    depth_scale: float = 0.3,
+) -> np.ndarray:
+    """Generate a magic eye stereogram image.
+    
+    This creates a single-image random-dot stereogram (SIRDS) where a 3D shape
+    can be perceived when viewed with the proper technique (parallel or cross-eyed viewing).
+    
+    Args:
+        width: Width of the output image in pixels
+        height: Height of the output image in pixels
+        pattern_type: Type of depth pattern ('sine', 'circles', 'pyramid', 'random')
+        depth_amplitude: Amplitude of depth variation (higher = more depth)
+        strip_width: Width of the initial random pattern strip
+        eye_separation: Eye separation as fraction of width (affects viewing distance)
+        depth_scale: Scale factor for depth effect (0-1)
+    
+    Returns:
+        A 2D numpy array containing the stereogram image (grayscale, 0-255)
+    """
+    # Generate depth map
+    depth_map = generate_depth_map(width, height, pattern_type, depth_amplitude)
+    
+    # Create output image
+    stereogram = np.zeros((height, width), dtype=np.uint8)
+    
+    # Generate initial random pattern strip
+    pattern = generate_random_pattern(width, height, strip_width)
+    stereogram[:, :strip_width] = pattern
+    
+    # Generate stereogram using the depth map
+    # This implements the basic stereogram algorithm
+    for x in range(strip_width, width):
+        for y in range(height):
+            # Calculate the shift based on depth
+            # Depth affects how far we look back in the image
+            depth_value = int(depth_map[y, x])
+            shift = int((depth_value - 128) * depth_scale * eye_separation * width / 256)
+            
+            # Reference pixel position
+            ref_x = x - strip_width - shift
+            
+            if ref_x >= 0 and ref_x < x:
+                stereogram[y, x] = stereogram[y, ref_x]
+            else:
+                # If reference is out of bounds, use random value
+                stereogram[y, x] = np.random.randint(0, 256, dtype=np.uint8)
+    
+    return stereogram
+
+
+def save_as_geotiff(
+    stereogram: np.ndarray,
+    output_path: str,
+    bounds: Optional[Tuple[float, float, float, float]] = None,
+    crs: str = "EPSG:4326",
+) -> None:
+    """Save the stereogram as a GeoTIFF file.
+    
+    Args:
+        stereogram: The stereogram image array
+        output_path: Path to save the GeoTIFF file
+        bounds: Geographic bounds as (min_x, min_y, max_x, max_y).
+                If None, uses default bounds (0, 0, width, height)
+        crs: Coordinate reference system (default: WGS84)
+    """
+    import rasterio
+    from rasterio.transform import from_bounds
+    
+    height, width = stereogram.shape
+    
+    # Set default bounds if not provided
+    if bounds is None:
+        bounds = (0.0, 0.0, float(width), float(height))
+    
+    # Calculate transform from bounds
+    transform = from_bounds(*bounds, width, height)
+    
+    # Save as GeoTIFF
+    with rasterio.open(
+        output_path,
+        'w',
+        driver='GTiff',
+        height=height,
+        width=width,
+        count=1,
+        dtype=stereogram.dtype,
+        crs=crs,
+        transform=transform,
+        compress='lzw',
+    ) as dst:
+        dst.write(stereogram, 1)
+        # Add description
+        dst.update_tags(1, DESCRIPTION='Magic Eye Stereogram')
+        dst.set_band_description(1, 'Magic Eye Stereogram')
